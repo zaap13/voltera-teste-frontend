@@ -10,6 +10,10 @@
 	let isLoading = false;
 	let inputValue = data.agifyData?.name ?? '';
 
+	$: pageTitle = data.agifyData?.name
+		? `Idade para ${data.agifyData.name}`
+		: 'Qual a Idade? | Agify';
+
 	beforeNavigate(() => {
 		isLoading = true;
 	});
@@ -17,6 +21,12 @@
 	afterNavigate(() => {
 		isLoading = false;
 	});
+
+	function selectOnMount(node: HTMLInputElement) {
+		if (node.value) {
+			node.select();
+		}
+	}
 
 	const handleUrlUpdate = () => {
 		if (!browser) return;
@@ -35,7 +45,18 @@
 	};
 
 	const debouncedUrlUpdate = debounce(handleUrlUpdate, 700);
+
+	const clearInput = () => {
+		inputValue = '';
+		const inputElement = document.getElementById('name-input') as HTMLInputElement;
+		inputElement?.focus();
+		handleUrlUpdate();
+	};
 </script>
+
+<svelte:head>
+	<title>{pageTitle}</title>
+</svelte:head>
 
 <main class="glass-card">
 	<h1>Qual a Idade?</h1>
@@ -52,17 +73,37 @@
 			></path></svg
 		>
 		<input
+			id="name-input"
 			type="text"
 			placeholder="Digite um nome..."
 			bind:value={inputValue}
 			on:input={debouncedUrlUpdate}
+			use:selectOnMount
 		/>
+		{#if inputValue}
+			<button
+				class="clear-button"
+				on:click={clearInput}
+				aria-label="Limpar input"
+				transition:fade={{ duration: 150 }}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="clear-icon"
+					><path
+						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+					></path></svg
+				>
+			</button>
+		{/if}
 	</div>
 
-	<div class="result-area">
+	<div class="result-area" aria-live="polite">
 		{#if isLoading}
 			<div class="spinner" transition:fade></div>
-		{:else if data.agifyData?.age !== null && data.agifyData?.age !== undefined}
+		{:else if data.agifyData && data.agifyData.age !== null}
 			<div class="result-content" transition:fade={{ duration: 400 }}>
 				<p class="result-text">
 					Com base em {data.agifyData.count.toLocaleString('pt-BR')} registos, a idade estimada para
@@ -78,6 +119,10 @@
 						>{data.agifyData.name}</strong
 					>.
 				</p>
+			</div>
+		{:else}
+			<div class="initial-state" transition:fade={{ duration: 400 }}>
+				<p>Aguardando um nome para começar a busca...</p>
 			</div>
 		{/if}
 	</div>
@@ -123,7 +168,7 @@
 	input {
 		width: 100%;
 		font-size: 1rem;
-		padding: 1.15rem 1rem 1.15rem 3.5rem;
+		padding: 1.15rem 3.5rem;
 		border-radius: 9999px;
 		background-color: rgba(0, 0, 0, 0.2);
 		color: var(--text-primary);
@@ -141,16 +186,43 @@
 		box-shadow: 0 0 15px -3px var(--primary);
 		background-color: rgba(0, 0, 0, 0.3);
 	}
+	.clear-button {
+		position: absolute;
+		right: 0.5rem;
+		top: 50%;
+		transform: translateY(-50%);
+		background: none;
+		border: none;
+		padding: 0.5rem;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+	}
+	.clear-icon {
+		width: 1.25rem;
+		height: 1.25rem;
+		color: var(--text-secondary);
+		transition: color 0.2s;
+	}
+	.clear-button:hover .clear-icon {
+		color: var(--text-primary);
+	}
 	.result-area {
 		margin-top: 2rem;
 		min-height: 170px;
 		display: grid;
 		place-items: center;
 	}
-	.result-content {
+	.result-content,
+	.initial-state {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
+	}
+	.initial-state p {
+		color: var(--text-secondary);
 	}
 	.result-text {
 		margin: 0;
